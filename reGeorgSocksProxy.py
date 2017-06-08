@@ -24,6 +24,8 @@ TTLEXPIRED = "\x06"
 UNSUPPORTCMD = "\x07"
 ADDRTYPEUNSPPORT = "\x08"
 UNASSIGNED = "\x09"
+basic_header = {"Authorization": "Basic RG9tYWluVXNlcm5hbWU6UGFzc3dvcmQ="}
+
 
 BASICCHECKSTRING = "Georg says, 'All seems fine'"
 
@@ -224,7 +226,7 @@ class session(Thread):
         cookie = None
         conn = self.httpScheme(host=self.httpHost, port=self.httpPort)
         # response = conn.request("POST", self.httpPath, params, headers)
-        response = conn.urlopen('POST', self.connectString + "?cmd=connect&target=%s&port=%d" % (target, port), headers=headers, body="")
+        response = conn.urlopen('POST', self.connectString + "?cmd=connect&target=%s&port=%d" % (target, port), headers=dict(headers,**basic_header), body="")
         if response.status == 200:
             status = response.getheader("x-status")
             if status == "OK":
@@ -243,7 +245,7 @@ class session(Thread):
         headers = {"X-CMD": "DISCONNECT", "Cookie": self.cookie}
         params = ""
         conn = self.httpScheme(host=self.httpHost, port=self.httpPort)
-        response = conn.request("POST", self.httpPath + "?cmd=disconnect", params, headers)
+        response = conn.request("POST", self.httpPath + "?cmd=disconnect", params, dict(headers, **basic_header))
         if response.status == 200:
             log.info("[%s:%d] Connection Terminated" % (self.target, self.port))
         conn.close()
@@ -256,7 +258,7 @@ class session(Thread):
                     break
                 data = ""
                 headers = {"X-CMD": "READ", "Cookie": self.cookie, "Connection": "Keep-Alive"}
-                response = conn.urlopen('POST', self.connectString + "?cmd=read", headers=headers, body="")
+                response = conn.urlopen('POST', self.connectString + "?cmd=read", headers=dict(headers,**basic_header), body="")
                 data = None
                 if response.status == 200:
                     status = response.getheader("x-status")
@@ -304,7 +306,7 @@ class session(Thread):
                 if not data:
                     break
                 headers = {"X-CMD": "FORWARD", "Cookie": self.cookie, "Content-Type": "application/octet-stream", "Connection": "Keep-Alive"}
-                response = conn.urlopen('POST', self.connectString + "?cmd=forward", headers=headers, body=data)
+                response = conn.urlopen('POST', self.connectString + "?cmd=forward", headers=dict(headers, **basic_header), body=data)
                 if response.status == 200:
                     status = response.getheader("x-status")
                     if status == "OK":
@@ -371,7 +373,8 @@ def askGeorg(connectString):
         httpScheme = urllib3.HTTPSConnectionPool
 
     conn = httpScheme(host=httpHost, port=httpPort)
-    response = conn.request("GET", httpPath)
+  
+    response = conn.request("GET", httpPath,headers = basic_header)
     if response.status == 200:
         if BASICCHECKSTRING == response.data.strip():
             log.info(BASICCHECKSTRING)
